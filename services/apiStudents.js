@@ -6,13 +6,15 @@ export async function getStudentsApi(
   pageNumber = 1,
   searchString = "",
 ) {
+  console.log(searchString);
   const token = JSON.parse(localStorage.getItem("user"))?.token;
   if (!token) {
     window.location.href = "/login";
     throw new Error("No authentication token found");
   }
-
   const myURL = `${API_BASE_URL}/api/Users?PageSize=${pageSize}&PageNumber=${pageNumber}&SearchString=${searchString}`;
+
+  console.log(myURL);
   const res = await fetchWithRefresh(myURL, {
     method: "GET",
     headers: {
@@ -26,6 +28,5 @@ export async function getStudentsApi(
   }
 
   const data = await res.json();
-  console.log("getStudentsApi response data:", data);
-  return data.items || [];
+  return data;
 }
