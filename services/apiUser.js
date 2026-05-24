@@ -1,10 +1,12 @@
 import { API_BASE_URL } from "./consts";
+import { fetchWithRefresh } from "./fetchWithRefresh";
 
 export async function login(data) {
   const { username, password } = data;
   const myURL = `${API_BASE_URL}/api/Account/Login`;
 
-  const res = await fetch(myURL, {
+  console.log(data);
+  const res = await fetchWithRefresh(myURL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -65,15 +67,14 @@ export async function registerApi(data) {
 
 export async function refreshTokenApi() {
   const userToken = localStorage.getItem("sessionToken");
-  if (!userToken) {
-    return null;
-  }
   const myURL = `${API_BASE_URL}/api/Account/refreshToken`;
 
   const res = await fetch(myURL, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
+      // Include current token if available
+      ...(userToken && { Authorization: `Bearer ${userToken}` }),
     },
     // include cookies so server-side HttpOnly refresh token is sent
     credentials: "include",
@@ -103,47 +104,48 @@ export async function refreshTokenApi() {
 export async function logoutApi() {
   const myURL = `${API_BASE_URL}/api/Account/revokeToken`;
   const sessionTokenRaw = localStorage.getItem("sessionToken");
-  const res = await fetch(myURL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${sessionTokenRaw}`,
-    },
-    // include cookies so server-side can clear HttpOnly refresh token
-    credentials: "include",
-  });
-  if (!res.ok) {
-    // try to parse JSON error body, fall back to text
-    let errorBody = null;
-    try {
-      errorBody = await res.json();
-    } catch (e) {
-      try {
-        const text = await res.text();
-        errorBody = text || null;
-      } catch (e2) {
-        errorBody = null;
-      }
-    }
 
-    console.error(
-      "Logout API error response:",
-      errorBody,
-      "status:",
-      res.status,
-    );
-
-    const message =
-      (errorBody &&
-        (errorBody.message || errorBody.error || JSON.stringify(errorBody))) ||
-      `Logout failed (status ${res.status})`;
-
-    const err = new Error(message);
-    err.status = res.status;
-    err.body = errorBody;
-    throw err;
+  // If no token, just clear local storage and return
+  if (!sessionTokenRaw) {
+    localStorage.removeItem("user");
+    localStorage.removeItem("sessionToken");
+    return;
   }
 
-  localStorage.removeItem("user");
-  localStorage.removeItem("sessionToken");
+  try {
+    // Try to refresh token first to ensure we have a valid token for logout
+    try {
+      await refreshTokenApi();
+    } catch (refreshError) {
+      console.warn(
+        "Token refresh before logout failed, proceeding with logout anyway",
+        refreshError,
+      );
+    }
+
+    const updatedToken = localStorage.getItem("sessionToken");
+
+    const res = await fetch(myURL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${updatedToken || sessionTokenRaw}`,
+      },
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(
+        "Logout API returned error, but clearing local storage anyway:",
+        text,
+      );
+    }
+  } catch (error) {
+    console.warn("Logout error, but clearing local storage anyway:", error);
+  } finally {
+    // Always clear local storage even if logout API fails
+    localStorage.removeItem("user");
+    localStorage.removeItem("sessionToken");
+  }
 }

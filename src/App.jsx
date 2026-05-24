@@ -16,6 +16,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import AdminCourses from "./pages/AdminCourses";
 // import ProtectedRouter from "./pages/ProtectedRouter";
 import Modal from "./components/Modal";
+import Students from "./pages/Studentspage";
 // import ProtectedAdminRouter from "./pages/ProtectedAdminRouter";
 
 const queryClient = new QueryClient({
@@ -56,6 +57,7 @@ function App() {
               >
                 <Route index element={<Dashboard />} />
                 <Route path="courses" element={<AdminCourses />} />
+                <Route path="students" element={<Students />} />
               </Route>
             </Route>
 

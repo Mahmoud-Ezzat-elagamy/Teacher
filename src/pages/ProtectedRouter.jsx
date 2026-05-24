@@ -23,24 +23,39 @@ function ProtectedRouter({ children }) {
         const parsedUser = JSON.parse(storedUser);
         const refreshTokenExpiration = parsedUser?.refreshTokenExpiration;
 
+        // Check if refresh token is expired
         if (refreshTokenExpiration && isPast(refreshTokenExpiration)) {
-          // localStorage.removeItem("user");
-          // localStorage.removeItem("sessionToken");
+          console.warn("Refresh token expired");
+          localStorage.removeItem("user");
+          localStorage.removeItem("sessionToken");
           if (!cancelled) {
             setAuthState("unauthenticated");
           }
           return;
         }
 
-        await refreshUserToken();
+        // Always attempt to refresh the token on mount
+        try {
+          await refreshUserToken();
+          console.log("Token refreshed successfully on mount");
+        } catch (refreshError) {
+          console.error("Token refresh failed on mount:", refreshError);
+          // If refresh fails, clear auth and redirect to login
+          localStorage.removeItem("user");
+          localStorage.removeItem("sessionToken");
+          if (!cancelled) {
+            setAuthState("unauthenticated");
+          }
+          return;
+        }
 
         if (!cancelled) {
           setAuthState("authenticated");
         }
       } catch (error) {
-        console.error("Session refresh failed", error);
-        // localStorage.removeItem("user");
-        // localStorage.removeItem("sessionToken");
+        console.error("Session verification failed", error);
+        localStorage.removeItem("user");
+        localStorage.removeItem("sessionToken");
         if (!cancelled) {
           setAuthState("unauthenticated");
         }

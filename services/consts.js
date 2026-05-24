@@ -1,1 +1,1 @@
-export const API_BASE_URL = "https://teachly-api-dev.azurewebsites.net";
+export const API_BASE_URL = "https://teachly.runasp.net";

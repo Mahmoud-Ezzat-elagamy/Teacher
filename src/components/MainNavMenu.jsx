@@ -22,10 +22,18 @@ function MainNavMenu({
         : "text-primary-50 hover:bg-primary-800 hover:text-white"
     }`;
 
-  const handleLogout = () => {
-    logoutApi();
-    handleCloseMenu();
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } catch (err) {
+      console.error("Logout API error:", err);
+      // Clear local storage even if API call fails
+      localStorage.removeItem("user");
+      localStorage.removeItem("sessionToken");
+    } finally {
+      handleCloseMenu();
+      navigate("/login");
+    }
   };
 
   return (
@@ -116,7 +124,7 @@ function MainNavMenu({
               </NavLink>
               {/* :TODO handle logout */}
               <NavLink
-                // to="/login"
+                to="/login"
                 className={getLinkClass}
                 onClick={handleLogout}
               >
